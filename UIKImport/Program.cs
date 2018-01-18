@@ -68,65 +68,112 @@ namespace UIKImport
 
 		static void Main(string[] args)
 		{
-
-			XmlReader reader = XmlReader.Create(@"Adriesa_UIK_version_3.xml");
-
+			//XmlReader reader = XmlReader.Create(@"Adriesa_UIK_version_3.xml");
 			NpgsqlConnection conn = new NpgsqlConnection("server=localhost;port=5432;user id=postgres;password=postgres;database=uik");
 			conn.Open();
 
 			IDbCommand command = conn.CreateCommand();
-			
+
+			XmlDocument doc = new XmlDocument();
+			doc.Load(@"Adriesa_UIK_version_3.xml");
+
+			var records = doc.GetElementsByTagName("nsi:record");
+
 			var dict = new Dictionary<string, object>();
-			var count = 0;
-			while (reader.Read())
+			var columns = new List<string>
 			{
-				if (reader.IsStartElement())
+				"SubjectCode",
+				"SubjectName",
+				"UIKNumber",
+				"CountryCode",
+				"IntercityCode",
+				"Phone",
+				"Latitude",
+				"Longitude",
+				"Address",
+				"UIKCode",
+				"UIKPhone",
+				"UIKLatitude",
+				"UIKLongtitude",
+				"UIKAddress"
+			};
+			var count = 0;
+
+			for (int i = 0; i< records.Count; i++)
+			{
+				var record = records.Item(i);
+				var uid = record.Attributes.Item(0).Value;
+
+				var attrs = record.ChildNodes;
+
+				for(int j = 0; j< attrs.Count; j++)
 				{
-					if (reader.IsEmptyElement) { }
-						//Console.WriteLine("<{0}/>", reader.Name);
-					else
-					{
-						Console.Write("<{0}> ", reader.Name);
-						reader.Read(); // Read the start tag.
-						if (reader.IsStartElement()) //{ }  // Handle nested elements.
-						{
-							reader.Read(); // Read the start tag.
-							Console.Write("\r\n<{0}> val=", reader.Name);
-							Console.WriteLine(reader.ReadString());  //Read the text content of the element.
-						}
-					}
+					var attr = attrs.Item(j);
+					var val = attr.InnerText;
 
-					/*
-					if (reader.HasAttributes)
-					{
-						//Console.WriteLine("Attributes of <" + reader.Name + ">");
-
-						while (reader.MoveToNextAttribute())
-						{
-							dict.Add(reader.Name, reader.Value);
-							//Console.WriteLine(" {0}={1}", reader.Name, reader.Value);
-						}
-
-						var sql = GenerateInsertStatement("UIK", dict);
-						dict.Clear();
-
-						command.CommandText = sql;
-						var rows = command.ExecuteNonQuery();
-						count += rows;
-						Console.WriteLine($"ROWS: {count.ToString()}");
-
-						// Move the reader back to the element node.
-						reader.MoveToElement();
-					}*/
+					dict.Add(columns[j], val);
 				}
 
-				//Console.WriteLine(result);
+				dict.Add("RecID", uid);
+				dict.Add("State", 1);
+				var sql = GenerateInsertStatement("UIK", dict);
+
+				command.CommandText = sql;
+				var rows = command.ExecuteNonQuery();
+
+				count += rows;
+				Console.WriteLine($"ROWS: {count.ToString()}");
+
+				dict.Clear();
 			}
+			
+			/*
+			
+			var columnNumber = 0;
+			while (reader.Read())
+			{
+				var name = reader.Name;
+				//reader.Read();
+
+				if (name == "nsi:record")
+				{
+					reader.Read();
+					for (int i = 0; i < 14; i++)
+					{
+						reader.Read();
+						reader.Read();
+						reader.Read();
+
+						var name1 = reader.Name;
+						reader.Read();
+						var value1 = reader.Value;
+
+						dict.Add(columns[columnNumber++], value1);
+
+						reader.Read();
+						reader.Read();
+						reader.Read();
+						reader.Read();
+					}
+
+					var sql = GenerateInsertStatement("UIK", dict);
+
+					command.CommandText = sql;
+					var rows = command.ExecuteNonQuery();
+
+					count += rows;
+					Console.WriteLine($"ROWS: {count.ToString()}");
+					
+					dict.Clear();
+					columnNumber = 0;
+
+					reader.Read();
+				}
+			}*/
 
 			conn.Close();
 			Console.WriteLine("END");
 			Console.ReadLine();
-
 		}
 	}
 }
